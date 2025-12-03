@@ -1,254 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lavalink Status Check</title>
-    <style>
-        /* Your CSS from the template goes here */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;
-            display: flex; justify-content: center; align-items: center; padding: 20px; }
-        /* ... Rest of your CSS ... */
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎵 Lavalink Status Monitor</h1>
-            <p>Real-time monitoring for your Lavalink server</p>
+async function checkStatus() {
+    if (isChecking) return;
+    
+    isChecking = true;
+    const checkBtn = document.getElementById('check-btn');
+    const resultContainer = document.getElementById('result-container');
+    
+    checkBtn.disabled = true;
+    checkBtn.innerHTML = '🔄 Checking...';
+    
+    // Show loading state
+    resultContainer.innerHTML = `
+        <div class="status-card status-loading">
+            <div class="loading-spinner"></div>
+            <div class="status-title">Checking Status...</div>
+            <div class="status-message">Connecting to Lavalink server...</div>
         </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/check');
+        const data = await response.json();
         
-        <div class="content">
-            <div class="server-info">
-                <h3>📡 Server Configuration</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Server IP</div>
-                        <div class="info-value" id="server-ip">148.113.25.124</div>
+        lastCheckTime = new Date();
+        updateTimestamp();
+        
+        let statusHtml = '';
+        
+        if (data.status === 'online') {
+            // ... existing online code ...
+        } else if (data.status === 'error') {
+            statusHtml = `
+                <div class="status-card status-error">
+                    <div class="status-icon">⚠️</div>
+                    <div class="status-title">Server Error (${data.message})</div>
+                    <div class="status-message">${data.details || data.message}</div>
+                    ${data.data ? `
+                    <div class="status-details">
+                        <div class="details-title" onclick="toggleDetails()">
+                            <span>📋 Server Response</span>
+                            <span id="details-arrow">▼</span>
+                        </div>
+                        <div class="details-content" id="details-content">
+                            <div class="lavalink-data">
+                                ${JSON.stringify(data.data, null, 2)}
+                            </div>
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <div class="info-label">Port</div>
-                        <div class="info-value" id="server-port">7835</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Protocol</div>
-                        <div class="info-value">HTTP</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Endpoint</div>
-                        <div class="info-value">/v4/info</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="controls">
-                <button class="check-btn" onclick="checkStatus()" id="check-btn">
-                    🔍 Check Status Now
-                </button>
-                <div class="timestamp" id="last-check">
-                    Last check: Never
-                </div>
-            </div>
-            
-            <div class="result-container" id="result-container">
-                <div class="status-card status-loading" id="status-card">
-                    <div class="loading-spinner"></div>
-                    <div class="status-title">Checking Status...</div>
-                    <div class="status-message">Connecting to Lavalink server...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Configuration
-        const LAVALINK_IP = '148.113.25.124';
-        const LAVALINK_PORT = '7835';
-        
-        let isChecking = false;
-        let lastCheckTime = null;
-        
-        function updateTimestamp() {
-            const timestampEl = document.getElementById('last-check');
-            if (lastCheckTime) {
-                const timeString = lastCheckTime.toLocaleTimeString();
-                const dateString = lastCheckTime.toLocaleDateString();
-                timestampEl.textContent = `Last check: ${dateString} ${timeString}`;
-            }
-        }
-        
-        function formatUptime(seconds) {
-            if (!seconds) return 'N/A';
-            
-            const days = Math.floor(seconds / 86400);
-            const hours = Math.floor((seconds % 86400) / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            
-            if (days > 0) {
-                return `${days}d ${hours}h`;
-            } else if (hours > 0) {
-                return `${hours}h ${minutes}m`;
-            } else if (minutes > 0) {
-                return `${minutes}m ${secs}s`;
-            } else {
-                return `${secs}s`;
-            }
-        }
-        
-        function toggleDetails() {
-            const details = document.getElementById('details-content');
-            const arrow = document.getElementById('details-arrow');
-            details.classList.toggle('show');
-            arrow.textContent = details.classList.contains('show') ? '▲' : '▼';
-        }
-        
-        async function checkStatus() {
-            if (isChecking) return;
-            
-            isChecking = true;
-            const checkBtn = document.getElementById('check-btn');
-            const resultContainer = document.getElementById('result-container');
-            
-            checkBtn.disabled = true;
-            checkBtn.innerHTML = '🔄 Checking...';
-            
-            // Show loading state
-            resultContainer.innerHTML = `
-                <div class="status-card status-loading">
-                    <div class="loading-spinner"></div>
-                    <div class="status-title">Checking Status...</div>
-                    <div class="status-message">Connecting to Lavalink server...</div>
+                    ` : ''}
                 </div>
             `;
-            
-            try {
-                const response = await fetch('/api/check');
-                const data = await response.json();
-                
-                lastCheckTime = new Date();
-                updateTimestamp();
-                
-                let statusHtml = '';
-                
-                if (data.status === 'online') {
-                    const lavalinkData = data.data;
-                    const players = lavalinkData.players || 0;
-                    const playingPlayers = lavalinkData.playingPlayers || 0;
-                    
-                    statusHtml = `
-                        <div class="status-card status-online">
-                            <div class="status-icon">✅</div>
-                            <div class="status-title">Lavalink is ONLINE</div>
-                            <div class="status-message">Server is responding normally</div>
-                            
-                            <div class="stats">
-                                <div class="stat-item">
-                                    <div class="stat-value">${players}</div>
-                                    <div class="stat-label">Total Players</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value">${playingPlayers}</div>
-                                    <div class="stat-label">Playing Now</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value">${lavalinkData.lavalink?.version || 'N/A'}</div>
-                                    <div class="stat-label">Version</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value">${formatUptime(lavalinkData.lavalink?.uptime)}</div>
-                                    <div class="stat-label">Uptime</div>
-                                </div>
-                            </div>
-                            
-                            <div class="status-details">
-                                <div class="details-title" onclick="toggleDetails()">
-                                    <span>📊 Detailed Information</span>
-                                    <span id="details-arrow">▼</span>
-                                </div>
-                                <div class="details-content" id="details-content">
-                                    <div class="lavalink-data">
-                                        ${JSON.stringify(lavalinkData, null, 2)}
-                                    </div>
-                                </div>
-                            </div>
+        } else {
+            statusHtml = `
+                <div class="status-card status-offline">
+                    <div class="status-icon">❌</div>
+                    <div class="status-title">Connection Failed</div>
+                    <div class="status-message">${data.message}</div>
+                    <div class="status-details">
+                        <div class="details-title" onclick="toggleDetails()">
+                            <span>🔍 Error Details</span>
+                            <span id="details-arrow">▼</span>
                         </div>
-                    `;
-                } else if (data.status === 'error') {
-                    statusHtml = `
-                        <div class="status-card status-error">
-                            <div class="status-icon">⚠️</div>
-                            <div class="status-title">Connection Error</div>
-                            <div class="status-message">${data.message}</div>
-                            <div class="status-details">
-                                <div class="details-title" onclick="toggleDetails()">
-                                    <span>🔧 Troubleshooting</span>
-                                    <span id="details-arrow">▼</span>
-                                </div>
-                                <div class="details-content" id="details-content">
-                                    <p>Possible issues:</p>
-                                    <ul style="margin: 10px 0; padding-left: 20px;">
-                                        <li>Lavalink server is down</li>
-                                        <li>Wrong IP address or port</li>
-                                        <li>Firewall blocking the connection</li>
-                                        <li>Authentication password is incorrect</li>
-                                    </ul>
-                                    <p>Error details: ${data.message}</p>
-                                </div>
-                            </div>
+                        <div class="details-content" id="details-content">
+                            <p><strong>Error:</strong> ${data.details || 'No details available'}</p>
+                            ${data.errorCode ? `<p><strong>Error Code:</strong> ${data.errorCode}</p>` : ''}
+                            <p><strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                            <hr style="margin: 15px 0; border-color: #e2e8f0;">
+                            <p><strong>Troubleshooting steps:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Check if Lavalink server is running</li>
+                                <li>Verify IP address and port are correct</li>
+                                <li>Check firewall settings</li>
+                                <li>Try connecting manually: http://${LAVALINK_IP}:${LAVALINK_PORT}/v4/info</li>
+                            </ul>
                         </div>
-                    `;
-                } else {
-                    statusHtml = `
-                        <div class="status-card status-offline">
-                            <div class="status-icon">❌</div>
-                            <div class="status-title">Lavalink is OFFLINE</div>
-                            <div class="status-message">${data.message}</div>
-                            <div class="status-details">
-                                <div class="details-title" onclick="toggleDetails()">
-                                    <span>🔧 Troubleshooting</span>
-                                    <span id="details-arrow">▼</span>
-                                </div>
-                                <div class="details-content" id="details-content">
-                                    <p>Possible issues:</p>
-                                    <ul style="margin: 10px 0; padding-left: 20px;">
-                                        <li>Server is not running</li>
-                                        <li>Network connectivity issues</li>
-                                        <li>Server IP/port changed</li>
-                                        <li>Server is under maintenance</li>
-                                    </ul>
-                                    <p>Error details: ${data.message}</p>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                resultContainer.innerHTML = statusHtml;
-                
-            } catch (error) {
-                resultContainer.innerHTML = `
-                    <div class="status-card status-offline">
-                        <div class="status-icon">💥</div>
-                        <div class="status-title">Request Failed</div>
-                        <div class="status-message">${error.message}</div>
                     </div>
-                `;
-            } finally {
-                isChecking = false;
-                checkBtn.disabled = false;
-                checkBtn.innerHTML = '🔍 Check Status Now';
-            }
+                </div>
+            `;
         }
         
-        // Auto-check on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            checkStatus();
-            // Auto-refresh every 30 seconds
-            setInterval(checkStatus, 30000);
-        });
-    </script>
-</body>
-</html>
+        resultContainer.innerHTML = statusHtml;
+        
+    } catch (error) {
+        resultContainer.innerHTML = `
+            <div class="status-card status-offline">
+                <div class="status-icon">💥</div>
+                <div class="status-title">Network Error</div>
+                <div class="status-message">${error.message}</div>
+                <p style="margin-top: 10px; color: #64748b;">
+                    Unable to reach the monitoring API. Check your network connection.
+                </p>
+            </div>
+        `;
+    } finally {
+        isChecking = false;
+        checkBtn.disabled = false;
+        checkBtn.innerHTML = '🔍 Check Status Now';
+    }
+}
